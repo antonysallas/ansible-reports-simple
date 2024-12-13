@@ -1,0 +1,54 @@
+{# templates/00_base.j2 #}
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>{% block title %}Switch Firmware Patch Completion Report{% endblock %}</title>
+  <link rel="stylesheet" href="{% if date_stamp %}../{% endif %}static/css/main.css">
+</head>
+
+<body>
+  {% block body %}{% endblock %}
+
+  {% block scripts %}
+  <script>
+    document.querySelectorAll(".detail-section").forEach((section) => {
+      section.addEventListener("click", function () {
+        // Toggle caret icon
+        const caret = this.querySelector(".caret-icon");
+        caret.classList.toggle("caret-right");
+        caret.classList.toggle("caret-down");
+
+        // Toggle expanded class for color change
+        this.classList.toggle("expanded");
+
+        // Toggle table visibility
+        const table = this.nextElementSibling;
+        table.classList.toggle("active");
+      });
+    });
+
+    // Set initial states for all sections
+    document.querySelectorAll(".detail-section").forEach((section, index) => {
+      const table = section.nextElementSibling;
+      const caret = section.querySelector(".caret-icon");
+
+      if (index === 0) {
+        // Expand first section
+        section.classList.add("expanded");
+        caret.classList.add("caret-down");
+        caret.classList.remove("caret-right");
+        if (table) table.classList.add("active");
+      } else {
+        // Collapse all other sections
+        section.classList.remove("expanded");
+        caret.classList.add("caret-right");
+        caret.classList.remove("caret-down");
+        if (table) table.classList.remove("active");
+      }
+    });
+  </script>
+  {% endblock %}
+</body>
+
+</html>

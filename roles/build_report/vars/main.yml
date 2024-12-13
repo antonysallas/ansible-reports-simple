@@ -1,0 +1,11 @@
+report_dir: /var/www/html
+web_host: ansible-1
+web_port: 9088
+# multi key, same value lookup for cisco
+vendor:
+  ios: &my_value 'Cisco'
+  iosxr: *my_value
+transport:
+  cliconf: "network_cli"
+  netconf: "netconf"
+  httpapi: "httpapi"

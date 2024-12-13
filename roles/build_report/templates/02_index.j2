@@ -1,0 +1,93 @@
+{# templates/03_index.j2 #}
+{% extends "00_base.j2" %}
+
+{% block body %}
+{% include '01_header.j2' %}
+
+<div class="content">
+  {% set report_files = found_reports.files | default([]) %}
+  {% if report_files | length > 0 %}
+  {% set grouped_reports = {} %}
+
+  {# Group reports by date directory #}
+  {% for report in report_files | sort(attribute='path', reverse=true) %}
+  {% set path_parts = report.path.split('/') %}
+  {% set date_dir = path_parts[-2] %}
+  {% set report_name = path_parts[-1] %}
+
+  {# Initialize group if it doesn't exist #}
+  {% if date_dir not in grouped_reports %}
+  {% set _ = grouped_reports.update({date_dir: []}) %}
+  {% endif %}
+
+  {# Add report to its group #}
+  {# Report File name format: 20241212150913_rtr1_Pre_patch-report.html #}
+  {% set timestamp = report_name.split('_')[0] %}
+  {% set report_datetime = timestamp | to_datetime('%Y%m%d%H%M%S') %}
+  {% set formatted_time = report_datetime.strftime('%I:%M:%S %p') %}
+  {% set _ = grouped_reports[date_dir].append({
+  'path': report.path,
+  'name': report_name,
+  'timestamp': timestamp,
+  'time': formatted_time,
+  'hostname': report_name.split('_')[1],
+  'type': report_name.split('_')[2],
+  }) %}
+  {% endfor %}
+
+  {# Display grouped reports #}
+  {% for date_dir, reports in grouped_reports.items() | sort(reverse=true) %}
+  {# Convert YYYYMMDD to DD-Mon-YYYY format #}
+  {% set year = date_dir[0:4] %}
+  {% set month = date_dir[4:6] | int %}
+  {% set day = date_dir[6:8] | int %}
+  {% set months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] %}
+  {% set formatted_date = '%02d-%s-%s' | format(day, months[month-1], year) %}
+
+  <div class="detail-section">
+    <span class="caret-icon"></span>
+    <p>{{ formatted_date }}</p>
+  </div>
+
+  {% if reports | length > 0 %}
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Activity Type</th>
+        <th>Hostname</th>
+        <th>Activity Time</th>
+        <th>Report Link</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for report in reports | sort(attribute='timestamp') %}
+      <tr>
+        <td>
+          <span class="activity-type {{ report.type | lower }}-patching">{{ report.type | upper }}-PATCHING</span>
+        </td>
+        <td>{{ report.hostname }}</td>
+        <td>{{ report.time }}</td>
+        <td>
+          <a href="{{ date_dir }}/{{ report.name }}">View Report</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-table {% if loop.first %}active{% endif %}">
+    <div class="empty-table-content">
+      No reports available for this date
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+  {% else %}
+  <div class="empty-table active">
+    <div class="empty-table-content">
+      No reports found
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

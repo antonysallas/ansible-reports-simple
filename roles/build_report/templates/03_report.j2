@@ -1,0 +1,61 @@
+{# templates/02_report.j2 #}
+{% extends "00_base.j2" %}
+
+{% block body %}
+{% include '01_header.j2' %}
+
+<div class="content">
+  {% for network_switch in groups['network']|sort %}
+  {% if hostvars[network_switch].ansible_facts.network_resources is defined %}
+  <div class="detail-section">
+    <span class="caret-icon"></span>
+    <p>
+      <img src="../static/images/network-switch-{{ report_type | lower }}-patching.png" alt="Network Switch"
+        class="router_image" />
+      {{ hostvars[network_switch].ansible_net_hostname }}
+    </p>
+  </div>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th colspan="2">
+          <span class="activity-type {{ report_type | lower }}-patching">
+            {{ report_type | upper }}-PATCHING
+          </span>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th>Model</th>
+        <td>{{ hostvars[network_switch].ansible_net_model }}</td>
+      </tr>
+      <tr>
+        <th>Serial Number</th>
+        <td>{{ hostvars[network_switch].ansible_net_serialnum }}</td>
+      </tr>
+      <tr>
+        <th>Platform</th>
+        <td>
+          {% set ansible_network_os = hostvars[network_switch].ansible_net_system %}
+          {{ vendor[ansible_network_os] }} {{ ansible_network_os }}
+        </td>
+      </tr>
+      <tr>
+        <th>Firmware Version</th>
+        <td>{{ hostvars[network_switch].ansible_net_version }}</td>
+      </tr>
+      <tr>
+        <th>Config Backup Location</th>
+        <td>file location</td>
+      </tr>
+    </tbody>
+  </table>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% endblock %}

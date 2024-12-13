@@ -1,0 +1,99 @@
+---
+- name: Get timestamp
+  run_once: true
+  ansible.builtin.set_fact:
+    timestamp: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+    date_stamp: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+    readable_date: "{{ lookup('pipe', 'date \"+%B %d, %Y\"') }}"
+
+- name: Debug timestamp and paths
+  ansible.builtin.debug:
+    msg:
+    - "Timestamp: {{ timestamp }}"
+    - "Date stamp: {{ date_stamp }}"
+    - "Readable date: {{ readable_date }}"
+    - "Report type: {{ report_type }}"
+    - "Report directory: {{ report_dir }}"
+
+- name: Create dated directory
+  ansible.builtin.file:
+    path: "{{ report_dir }}/{{ date_stamp }}"
+    state: directory
+    mode: "755"
+    recurse: true
+
+- name: Debug file paths
+  ansible.builtin.debug:
+    msg:
+    - "File path: {{ report_dir }}"
+    - "Full glob path: {{ report_dir + '/*/' }}"
+
+- name: Install apache
+  become: true
+  ansible.builtin.yum:
+    name: httpd
+    state: present
+
+- name: Change apache to specified port
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/httpd/conf/httpd.conf
+    regexp: '^Listen '
+    insertafter: '^#Listen '
+    line: 'Listen {{ web_port }}'
+
+- name: Set nis_enabled flag on and keep it persistent across reboots
+  become: true
+  ansible.posix.seboolean:
+    name: nis_enabled
+    state: true
+    persistent: true
+
+- name: Start httpd
+  become: true
+  ansible.builtin.service:
+    name: httpd
+    state: started
+
+- name: Include selinux role
+  vars:
+    selinux_fcontexts:
+    - { target: '{{ report_dir }}(/.*)?', setype: 'httpd_sys_content_t', state: 'present' }
+  ansible.builtin.include_role:
+    name: fedora.linux_system_roles.selinux
+
+- name: Create HTML report from template
+  template:
+    src: 03_report.j2
+    dest: "{{ report_dir }}/{{ date_stamp }}/{{ timestamp }}_{{ hostvars[item].ansible_net_hostname }}_{{ report_type }}_patch-report.html"
+    mode: '755'
+  loop: "{{ groups['network'] }}"
+  loop_control:
+    loop_var: item
+  vars:
+    date_stamp: "{{ date_stamp }}"
+
+- name: List available reports (debug)
+  ansible.builtin.find:
+    paths: "{{ report_dir }}"
+    recurse: true
+    patterns: "*patch-report.html"
+    file_type: file
+  register: found_reports
+
+- name: Create main index.html file
+  template:
+    src: 02_index.j2
+    dest: "{{ report_dir }}/index.html"
+    mode: '0644'
+
+- name: Copy CSS over
+  ansible.builtin.copy:
+    src: "static"
+    dest: "{{ report_dir }}"
+    directory_mode: true
+    mode: "644"
+
+- name: Display link to inventory report
+  ansible.builtin.debug:
+    msg: "Please go to http://{{ web_host }}:{{ web_port }}"
