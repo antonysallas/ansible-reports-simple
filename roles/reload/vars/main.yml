@@ -1,2 +1,0 @@
-platform_uptime_command:
-  ios: show version | i uptime
